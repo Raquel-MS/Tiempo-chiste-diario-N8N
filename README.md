@@ -13,7 +13,7 @@ Este workflow de n8n automatiza el envío diario de la predicción meteorológic
     * El nodo **Merge** combina los resultados de la predicción meteorológica y el chiste en un solo objeto para el siguiente nodo.
 
 3.  **Formatea el mensaje para Telegram:**
-    * Un nodo **Function** (denominado "Code1") toma la información combinada y genera un mensaje con formato Markdown optimizado para Telegram. Este mensaje incluye:
+    * Un nodo **Function** (denominado "Code mensaje") toma la información combinada y genera un mensaje con formato Markdown optimizado para Telegram. Este mensaje incluye:
         * Un saludo con un emoji representativo del clima.
         * El nombre del municipio en negrita.
         * La temperatura máxima y mínima en negrita, con el emoji de termómetro.
@@ -51,7 +51,7 @@ Para utilizar este workflow, necesitarás:
     * Selecciona el nodo **Schedule Trigger**.
     * Configura la hora del día a la que deseas que el workflow se ejecute diariamente.
 5.  **(Opcional) Editar el formato del mensaje:**
-    * Selecciona el nodo **Function** denominado "Code1".
+    * Selecciona el nodo **Function** denominado "Code mensaje".
     * Puedes modificar el código JavaScript para personalizar el formato del mensaje de Telegram, los emojis utilizados o la información que se incluye.
 
 ## Uso
