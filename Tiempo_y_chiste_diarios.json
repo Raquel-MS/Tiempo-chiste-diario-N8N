@@ -1,0 +1,220 @@
+{
+  "name": "Tiempo y chiste diarios",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -120,
+        0
+      ],
+      "id": "72cc871f-0497-41a3-9b9a-4acd1e69b64d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.1,
+      "position": [
+        500,
+        40
+      ],
+      "id": "935097d7-d79d-4311-b859-816d379ed444",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dataString = $input.first().json.data;\nconst parsedData = JSON.parse(dataString);\n\nconst prediccionHoy = parsedData[0].prediccion.dia[0];\nconst nombreMunicipio = parsedData[0].nombre;\n\nconst temperaturaMaxima = prediccionHoy.temperatura.maxima;\nconst temperaturaMinima = prediccionHoy.temperatura.minima;\n\n// Probabilidad de lluvia para todo el día (periodo \"00-24\")\nconst probabilidadLluviaDia = prediccionHoy.probPrecipitacion.find(item => item.periodo === \"00-24\")?.value || 0;\n\n// Verificar si hay avisos (la estructura de los avisos puede variar, aquí asumimos que hay una propiedad \"avisos\")\nconst avisos = parsedData[0].prediccion.avisos || [];\nconst hayAvisos = avisos.length > 0;\nconst textoAvisos = hayAvisos ? avisos.map(aviso => aviso.descripcion).join(\", \") : \"No hay avisos.\";\n\nreturn [{\n  json: {\n    nombreMunicipio,\n    temperaturaMaxima,\n    temperaturaMinima,\n    probabilidadLluvia: probabilidadLluviaDia,\n    hayAvisos,\n    textoAvisos\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -120
+      ],
+      "id": "41c8abee-d26d-4f57-a717-c29f25580464",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "chatId": "{{$env.TELEGRAM_CHAT_ID}}",
+        "text": "={{$json[\"mensaje\"]}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        820,
+        40
+      ],
+      "id": "da1da80c-8f22-4576-aa5c-8d6e2f578607",
+      "name": "Telegram",
+      "webhookId": "a776dffd-332e-45b2-b62f-52d8070ec244",
+      "credentials": {
+        "telegramApi": {
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://opendata.aemet.es/opendata/api/prediccion/especifica/municipio/diaria/28123?api_key={{$env.AEMET_API_KEY}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        -120
+      ],
+      "id": "e8591fd7-da22-46b1-a087-2b9da5bb29f0",
+      "name": "HTTP Request AEMET"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.datos}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        -120
+      ],
+      "id": "6827423e-934e-49ef-8615-878befd36f2b",
+      "name": "HTTP Request Datos"
+    },
+    {
+      "parameters": {
+        "url": "https://v2.jokeapi.dev/joke/Any?lang=es&type=single",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        180,
+        140
+      ],
+      "id": "69ce7906-b5cd-4c73-98df-01ffccc6b9f9",
+      "name": "HTTP Request Chiste"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recogemos los datos como hasta ahora\nconst nombreMunicipio = $items()[0].json.nombreMunicipio;\nconst temperaturaMaxima = $items()[0].json.temperaturaMaxima;\nconst temperaturaMinima = $items()[0].json.temperaturaMinima;\nconst probabilidadLluvia = $items()[0].json.probabilidadLluvia;\nconst hayAvisos = $items()[0].json.hayAvisos;\nconst textoAvisos = $items()[0].json.textoAvisos;\nconst chiste = $items()[1].json.joke;\n\n// Elegimos el emoji en función del clima\nlet emoji = \"☀️\"; // Por defecto, sol\n\nif (probabilidadLluvia > 30) {\n    emoji = \"🌧️\"; // Si hay bastante probabilidad de lluvia\n}\n\nif (temperaturaMaxima <= 5) {\n    emoji = \"❄️\"; // Si hace mucho frío\n}\n\n// Ahora construimos el mensaje con Markdown\nconst mensaje = `¡Buenos días desde *${nombreMunicipio}*! ${emoji}\n\n🌡️ *Temperatura:* 🌡️\n  * Máxima: *${temperaturaMaxima}°C\n  * Mínima: *${temperaturaMinima}°C\n\n💧 *Probabilidad de Lluvia:* *${probabilidadLluvia}%*\n\n⚠️ *Avisos:*\n${hayAvisos ? `  *${textoAvisos}*` : \"  *No hay avisos.*\"}\n\n😂 ¡Un chiste para empezar el día!\n${chiste}`;\n\n// Devolvemos el objeto\nreturn [{\n    json: {\n        mensaje: mensaje\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        40
+      ],
+      "id": "093a78da-3933-48de-8cc4-7ca386fd0243",
+      "name": "Code Mensaje"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request AEMET",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request Chiste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request AEMET": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Datos": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request Chiste": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0048ceb5-21ab-4779-89b6-082b091593de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "727da8aabf95ccc86c989eb82544bea8d34ec8bfbb1877fd530d5bea8cb2fe1a"
+  },
+  "id": "DJwZlMSthhhFiYDv",
+  "tags": []
+}
